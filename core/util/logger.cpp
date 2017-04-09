@@ -203,7 +203,7 @@ explore::~explore() {
       console = spdlog::stdout_color_mt(caller);
       console->set_level((spdlog::level::level_enum) detail::LOG_LEVEL);
     }
-    console->trace(stream.str());
+    console->info(stream.str());
   }
 }
 

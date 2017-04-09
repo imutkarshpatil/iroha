@@ -60,7 +60,7 @@ enum class LogLevel {
   Warning = spdlog::level::warn,
   Error = spdlog::level::err,
   Fatal = spdlog::level::critical,
-  Explore = spdlog::level::trace };
+  Explore };
 
 namespace detail {
 static LogLevel LOG_LEVEL = LogLevel::Debug;
