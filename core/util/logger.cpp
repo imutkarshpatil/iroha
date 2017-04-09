@@ -14,10 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <iostream>
-#include <string>
+#include <spdlog/spdlog.h>
 
-#include "datetime.hpp"
 #include "logger.hpp"
 
 /*
@@ -79,13 +77,19 @@ debug::~debug() {
   if (!std::uncaught_exception() &&
       static_cast<int>(detail::LOG_LEVEL) <=
           static_cast<int>(LogLevel::Debug)) {
-    const auto useCErr =
+    /*const auto useCErr =
         static_cast<int>(LogLevel::Error) <= static_cast<int>(LogLevel::Debug);
     (useCErr ? std::cerr : std::cout)
         << datetime::unixtime_str()
         << (true ? std::string(" ") + "DEBUG" + " [" + caller + "] "
                  : "[" + caller + "] ")
-        << stream.str() << std::endl;
+        << stream.str() << std::endl;*/
+    auto console = spdlog::get(caller);
+    if (!console) {
+      console = spdlog::stdout_color_mt(caller);
+      console->set_level((spdlog::level::level_enum) detail::LOG_LEVEL);
+    }
+    console->debug(stream.str());
   }
 }
 info::info(std::string &&caller) noexcept
@@ -95,13 +99,19 @@ info::info(const std::string &caller) noexcept
 info::~info() {
   if (!std::uncaught_exception() &&
       static_cast<int>(detail::LOG_LEVEL) <= static_cast<int>(LogLevel::Info)) {
-    const auto useCErr =
+    /*const auto useCErr =
         static_cast<int>(LogLevel::Error) <= static_cast<int>(LogLevel::Info);
     (useCErr ? std::cerr : std::cout)
         << datetime::unixtime_str()
         << (true ? std::string(" ") + "INFO" + " [" + caller + "] "
                  : "[" + caller + "] ")
-        << stream.str() << std::endl;
+        << stream.str() << std::endl;*/
+    auto console = spdlog::get(caller);
+    if (!console) {
+      console = spdlog::stdout_color_mt(caller);
+      console->set_level((spdlog::level::level_enum) detail::LOG_LEVEL);
+    }
+    console->info(stream.str());
   }
 }
 warning::warning(std::string &&caller) noexcept
@@ -112,13 +122,19 @@ warning::~warning() {
   if (!std::uncaught_exception() &&
       static_cast<int>(detail::LOG_LEVEL) <=
           static_cast<int>(LogLevel::Warning)) {
-    const auto useCErr = static_cast<int>(LogLevel::Error) <=
+    /*const auto useCErr = static_cast<int>(LogLevel::Error) <=
                          static_cast<int>(LogLevel::Warning);
     (useCErr ? std::cerr : std::cout)
         << datetime::unixtime_str()
         << (true ? std::string(" ") + "WARNING" + " [" + caller + "] "
                  : "[" + caller + "] ")
-        << stream.str() << std::endl;
+        << stream.str() << std::endl;*/
+    auto console = spdlog::get(caller);
+    if (!console) {
+      console = spdlog::stdout_color_mt(caller);
+      console->set_level((spdlog::level::level_enum) detail::LOG_LEVEL);
+    }
+    console->warn(stream.str());
   }
 }
 error::error(std::string &&caller) noexcept
@@ -129,13 +145,19 @@ error::~error() {
   if (!std::uncaught_exception() &&
       static_cast<int>(detail::LOG_LEVEL) <=
           static_cast<int>(LogLevel::Error)) {
-    const auto useCErr =
+    /*const auto useCErr =
         static_cast<int>(LogLevel::Error) <= static_cast<int>(LogLevel::Error);
     (useCErr ? std::cerr : std::cout)
         << datetime::unixtime_str()
         << (true ? std::string(" ") + "ERROR (-A-)" + " [" + caller + "] "
                  : "[" + caller + "] ")
-        << stream.str() << std::endl;
+        << stream.str() << std::endl;*/
+    auto console = spdlog::get(caller);
+    if (!console) {
+      console = spdlog::stdout_color_mt(caller);
+      console->set_level((spdlog::level::level_enum) detail::LOG_LEVEL);
+    }
+    console->error(stream.str());
   }
 }
 fatal::fatal(std::string &&caller) noexcept
@@ -146,13 +168,19 @@ fatal::~fatal() {
   if (!std::uncaught_exception() &&
       static_cast<int>(detail::LOG_LEVEL) <=
           static_cast<int>(LogLevel::Fatal)) {
-    const auto useCErr =
+    /*const auto useCErr =
         static_cast<int>(LogLevel::Error) <= static_cast<int>(LogLevel::Fatal);
     (useCErr ? std::cerr : std::cout)
         << datetime::unixtime_str()
         << (true ? std::string(" ") + "FATAL (`o')" + " [" + caller + "] "
                  : "[" + caller + "] ")
-        << stream.str() << std::endl;
+        << stream.str() << std::endl;*/
+    auto console = spdlog::get(caller);
+    if (!console) {
+      console = spdlog::stdout_color_mt(caller);
+      console->set_level((spdlog::level::level_enum) detail::LOG_LEVEL);
+    }
+    console->critical(stream.str());
   }
 }
 explore::explore(std::string &&caller) noexcept
@@ -163,13 +191,19 @@ explore::~explore() {
   if (!std::uncaught_exception() &&
       static_cast<int>(detail::LOG_LEVEL) <=
           static_cast<int>(LogLevel::Explore)) {
-    const auto useCErr = static_cast<int>(LogLevel::Error) <=
+    /*const auto useCErr = static_cast<int>(LogLevel::Error) <=
                          static_cast<int>(LogLevel::Explore);
     (useCErr ? std::cerr : std::cout)
         << datetime::unixtime_str()
         << (false ? std::string(" ") + "(EXPLORE)" + " [" + caller + "] "
                   : "[" + caller + "] ")
-        << stream.str() << std::endl;
+        << stream.str() << std::endl;*/
+    auto console = spdlog::get(caller);
+    if (!console) {
+      console = spdlog::stdout_color_mt(caller);
+      console->set_level((spdlog::level::level_enum) detail::LOG_LEVEL);
+    }
+    console->trace(stream.str());
   }
 }
 

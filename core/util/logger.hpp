@@ -17,7 +17,7 @@ limitations under the License.
 #ifndef __LOGGER_HPP_
 #define __LOGGER_HPP_
 
-#include <iostream>
+#include <spdlog/spdlog.h>
 #include <sstream>
 #include <string>
 
@@ -54,7 +54,13 @@ namespace logger {
     
 */
 
-enum class LogLevel { Debug = 0, Info, Warning, Error, Fatal, Explore };
+enum class LogLevel {
+  Debug = spdlog::level::debug,
+  Info = spdlog::level::info,
+  Warning = spdlog::level::warn,
+  Error = spdlog::level::err,
+  Fatal = spdlog::level::critical,
+  Explore = spdlog::level::trace };
 
 namespace detail {
 static LogLevel LOG_LEVEL = LogLevel::Debug;
