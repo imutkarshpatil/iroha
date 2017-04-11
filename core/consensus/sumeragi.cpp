@@ -68,40 +68,33 @@ std::string hash(const std::unique_ptr<Transaction>& tx) {
   return hash::sha3_256_hex("");
 };
 
-std::unique_ptr<ConsensusEvent> addSignature(
+flatbuffers::unique_ptr_t addSignature(
     std::unique_ptr<ConsensusEvent> event, const std::string& publicKey,
     const std::string& signature) {
   // Copy
   flatbuffers::FlatBufferBuilder fbb;
-  std::unique_ptr<std::vector<flatbuffers::Offset<Signature>>> signatures(
-      new std::vector<flatbuffers::Offset<Signature>>());
-  std::unique_ptr<std::vector<flatbuffers::Offset<Transaction>>> transactions(
-      new std::vector<flatbuffers::Offset<Transaction>>());
 
-  for (auto&& sig : *event->peerSignatures()) {
-    signatures->emplace_back(reinterpret_cast<flatbuffers::uoffset_t>(sig));
+  std::vector<flatbuffers::Offset<Signature>> sigOffsets;
+  for (const auto& sig : *event->peerSignatures()) {
+    sigOffsets.emplace_back(sig);
   }
-  for (auto&& tx : *event->transactions()) {
-    transactions->emplace_back(tx);
-  }
+
+  std::vector<flatbuffers::Offset<Transaction>> txOffsets(
+      *event->transactions()->begin(), *event->transactions()->end());
 
   // Add signature
-  std::vector<uint8_t>* encodedSignaturePtr = new std::vector<uint8_t>();
   auto encodedSignature = base64::decode(signature);
-  for (auto&& c : encodedSignature) {
-    encodedSignaturePtr->push_back(c);
-  }
-  signatures->emplace_back(iroha::CreateSignatureDirect(fbb, publicKey.c_str(),
-                                                        encodedSignaturePtr));
+
+  sigOffsets.emplace_back(
+      iroha::CreateSignatureDirect(fbb, publicKey.c_str(), &encodedSignature));
 
   // Create
-  auto event_buf = iroha::CreateConsensusEventDirect(fbb, signatures.get(),
-                                                     transactions.get());
-  fbb.Finish(event_buf);
+  auto eventBuf =
+      iroha::CreateConsensusEventDirect(fbb, &sigOffsets, &txOffsets);
 
-  // ToDo I think std::unique_ptr<const T> is not popular. Is it?
-  return std::unique_ptr<ConsensusEvent>(const_cast<ConsensusEvent*>(
-      flatbuffers::GetRoot<ConsensusEvent>(fbb.GetBufferPointer())));
+  fbb.Finish(eventBuf);
+
+  return fbb.ReleaseBufferPointer();
 }
 
 bool eventSignatureIsEmpty(const std::unique_ptr<ConsensusEvent>& event) {
@@ -210,8 +203,8 @@ void initializeSumeragi() {
   logger::explore("sumeragi") << "\033[95m|+-ーーーーーーーーー-+|\033[0m";
   logger::explore("sumeragi") << "\033[95m|| 　　　　　　　　　 ||\033[0m";
   logger::explore("sumeragi") << "\033[95m|| いろは合意形成機構 ||\033[0m";
-  logger::explore("sumeragi")
-      << "\033[95m|| 　　　\033[1mすめらぎ\033[0m\033[95m　　 ||\033[0m";
+  logger::explore("sumeragi") << "\033[95m|| 　　　\033[1mすめらぎ"
+                                 "\033[0m\033[95m　　 ||\033[0m";
   logger::explore("sumeragi") << "\033[95m|| 　　　　　　　　　 ||\033[0m";
   logger::explore("sumeragi") << "\033[95m|+-ーーーーーーーーー-+|\033[0m";
   logger::explore("sumeragi") << "\033[95m+==ーーーーーーーーー==+\033[0m";
@@ -228,67 +221,106 @@ void initializeSumeragi() {
 
   context = std::make_unique<Context>();
 
-  connection::iroha::SumeragiImpl::Torii::receive(
-      [](const std::string& from, std::unique_ptr<Transaction> transaction) {
-        logger::info("sumeragi") << "receive!";
+  /*
+  table Transaction {
+    creatorPubKey:   string      (required);
+    command:         Command     (required);
+    signatures:      [Signature] (required);
+    hash:            [ubyte];
+    attachment:      Attachment;
+  }
 
-        flatbuffers::FlatBufferBuilder fbb;
+  table Attachment {
+    mime: string;
+    data: [ubyte];
+  }
 
-        std::vector<flatbuffers::Offset<Signature>> signatures;
-        std::vector<flatbuffers::Offset<Transaction>> transactions;
-        std::vector<uint8_t> _hash(*transaction->hash()->begin(),
-                                   *transaction->hash()->end());
-        std::vector<uint8_t> data(*transaction->attachment()->data()->begin(),
-                                  *transaction->attachment()->data()->end());
+  table ConsensusEvent {
+    peerSignatures: [Signature];
+    transactions:   [Transaction];
+  }
 
+  */
+
+  /**
+   * Pass transaction to Torii
+   */
+  connection::iroha::SumeragiImpl::Torii::receive([](
+      const std::string& from, std::unique_ptr<Transaction> transaction) {
+
+    // In order to use processTransaction(), wrap Transaction in ConsensusEvent
+
+    using ByteArray = std::vector<uint8_t>;
+
+    logger::info("sumeragi (Torii)") << "Receive transaction";
+
+    flatbuffers::FlatBufferBuilder fbb;
+
+    ByteArray hashes(*transaction->hash()->begin(),
+                     *transaction->hash()->end());
+    ByteArray attachedData(*transaction->attachment()->data()->begin(),
+                           *transaction->attachment()->data()->end());
+    /*
+      Where should it be used?
         iroha::CreateAttachmentDirect(
-            fbb, transaction->attachment()->mime()->c_str(), &data);
+            fbb, transaction->attachment()->mime()->c_str(), &attachedData);
+    */
+    std::vector<flatbuffers::Offset<Signature>> sigOffsets;
+    for (auto&& txSig : *transaction->signatures()) {
+      std::vector<uint8_t> signatures(*txSig->signature()->begin(),
+                                      *txSig->signature()->end());
+      sigOffsets.emplace_back(iroha::CreateSignatureDirect(
+          fbb, txSig->publicKey()->c_str(), &signatures));
+    }
 
-        std::vector<flatbuffers::Offset<Signature>> tx_signatures;
+    std::vector<flatbuffers::Offset<Transaction>> txOffsets;
 
-        for (auto&& txSig : *transaction->signatures()) {
-          std::vector<uint8_t> _data;
-          for (auto d : *txSig->signature()) {
-            _data.emplace_back(d);
-          }
-          tx_signatures.emplace_back(iroha::CreateSignatureDirect(
-              fbb, txSig->publicKey()->c_str(), &_data));
-        }
+    inline flatbuffers::Offset<Transaction> CreateTransactionDirect(
+      flatbuffers::FlatBufferBuilder &_fbb,
+      const char *creatorPubKey = nullptr,
+      iroha::Command command_type = iroha::Command_NONE,
+      flatbuffers::Offset<void> command = 0,
+      const std::vector<flatbuffers::Offset<iroha::Signature>> *signatures = nullptr,
+      const std::vector<uint8_t> *hash = nullptr,
+      flatbuffers::Offset<Attachment> attachment = 0) 
 
-        transactions.emplace_back(iroha::CreateTransactionDirect(
-            fbb, transaction->creatorPubKey()->c_str(),
-            transaction
-                ->command_type(),  // confusing name, transactions / transaction
-            reinterpret_cast<flatbuffers::Offset<void>*>(
-                const_cast<void*>(transaction->command())),
-            &tx_signatures, &_hash,
-            iroha::CreateAttachmentDirect(
-                fbb, transaction->attachment()->mime()->c_str(), &data)));
 
-        // Create
-        auto event_buf =
-            iroha::CreateConsensusEventDirect(fbb, &signatures, &transactions);
-        fbb.Finish(event_buf);
+    txOffsets.emplace_back(iroha::CreateTransactionDirect(
+        fbb, transaction->creatorPubKey()->c_str(),
+        transaction->command_type(),
+        reinterpret_cast<flatbuffers::Offset<void>*>(
+            const_cast<void*>(transaction->command())),
+        &sigOffsets, &_hash,
+        iroha::CreateAttachmentDirect(
+            fbb, transaction->attachment()->mime()->c_str(), &attachedData)));
 
-        std::unique_ptr<ConsensusEvent> event(
-            reinterpret_cast<ConsensusEvent*>(fbb.GetBufferPointer()));
-        auto task = [event = std::move(event)]() mutable {
-          processTransaction(std::move(event));
-        };
-        pool.process(std::move(task));
+    // Create
+    auto event_buf =
+        iroha::CreateConsensusEventDirect(fbb, &sigOffsets, &txOffsets);
+    fbb.Finish(event_buf);
 
-        // ToDo I think std::unique_ptr<const T> is not popular. Is it?
-        // return std::unique_ptr<ConsensusEvent>(const_cast<ConsensusEvent*>(
-        //                                               flatbuffers::GetRoot<ConsensusEvent>(fbb.GetBufferPointer())));
-        // send processTransaction(event) as a task to processing pool
-        // this returns std::future<void> object
-        // (std::future).get() method locks processing until result of
-        // processTransaction will be available but processTransaction returns
-        // void, so we don't have to call it and wait
-        // std::function<void()> &&task = std::bind(processTransaction, event);
-        // pool.process(std::move(task));
-      });
+    std::unique_ptr<ConsensusEvent> event(
+        reinterpret_cast<ConsensusEvent*>(fbb.GetBufferPointer()));
+    auto task = [event = std::move(event)]() mutable {
+      processTransaction(std::move(event));
+    };
+    pool.process(std::move(task));
 
+    // ToDo I think std::unique_ptr<const T> is not popular. Is it?
+    // return std::unique_ptr<ConsensusEvent>(const_cast<ConsensusEvent*>(
+    //                                               flatbuffers::GetRoot<ConsensusEvent>(fbb.GetBufferPointer())));
+    // send processTransaction(event) as a task to processing pool
+    // this returns std::future<void> object
+    // (std::future).get() method locks processing until result of
+    // processTransaction will be available but processTransaction returns
+    // void, so we don't have to call it and wait
+    // std::function<void()> &&task = std::bind(processTransaction, event);
+    // pool.process(std::move(task));
+  });
+
+  /**
+   * Pass consensus event to Verify
+   */
   connection::iroha::SumeragiImpl::Verify::receive(
       [](const std::string& from, std::unique_ptr<ConsensusEvent> event) {
         logger::info("sumeragi") << "receive!";  // ToDo rewrite
