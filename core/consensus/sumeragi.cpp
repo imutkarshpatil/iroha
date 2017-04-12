@@ -221,10 +221,7 @@ void initializeSumeragi() {
 
   context = std::make_unique<Context>();
 
-  // receiver.set(callback(processTx(tx)))
   connection::iroha::SumeragiImpl::Torii::receive([](auto&& from, auto&& transaction) {
-
-    // In order to use processTransaction(), wrap Transaction in ConsensusEvent
 
     using ByteArray = std::vector<uint8_t>;
 
@@ -270,7 +267,7 @@ void initializeSumeragi() {
         iroha::CreateAttachmentDirect(
             fbb, transaction->attachment()->mime()->c_str(), &attachedData)));
 
-    // Create
+    // Create processing task
     auto event_buf =
         iroha::CreateConsensusEventDirect(fbb, &sigOffsets, &txOffsets);
     fbb.Finish(event_buf);

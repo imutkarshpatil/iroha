@@ -36,9 +36,6 @@ struct Config {
   std::string port;
 };
 
-/************************************************************************************
- * Verify
- ************************************************************************************/
 namespace iroha { namespace SumeragiImpl { namespace Verify {
 
 using CallBackFunc =
@@ -51,9 +48,6 @@ void receive(Verify::CallBackFunc &&callback);
 
 }}}  // namespace iroha::SumeragiImpl::Verify
 
-/************************************************************************************
- * Torii
- ************************************************************************************/
 namespace iroha { namespace SumeragiImpl { namespace Torii {
 
 
@@ -65,9 +59,6 @@ void receive(Torii::CallBackFunc &&callback);
 
 }}}  // namespace iroha::SumeragiImpl::Verify
 
-/************************************************************************************
- * Main connection
- ************************************************************************************/
 void initialize_peer();
 int run();
 void finish();

@@ -27,7 +27,7 @@ limitations under the License.
 #include <util/logger.hpp>
 #include <crypto/hash.hpp>
 #include <infra/config/peer_service_with_json.hpp>
-#include<service/peer_service.hpp>
+#include <service/peer_service.hpp>
 
 
 
