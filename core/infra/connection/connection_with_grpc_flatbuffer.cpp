@@ -69,6 +69,16 @@ public:
     receiver_ = std::make_shared<CallBackFunc>(rhs);
   }
 
+  template<typename... Args>
+  void call(Args&&... args) {
+    if (!receiver_) {
+      std::cout << "owariowariowari\n";
+      exit(1);
+    }
+    (*receiver_)(std::forward<Args>(args)...);
+    receiver_.reset();
+  }
+
 private:
   std::shared_ptr<CallBackFunc> receiver_;
 };
@@ -137,19 +147,18 @@ public:
 
   Response Verify(const ConsensusEvent& consensusEvent) {
     Response response;
-    logger::info("connection")  <<  "Operation";
-    logger::info("connection")  <<  "size: "    <<
-    consensusEvent.eventsignatures_size(); logger::info("connection")  <<
-    "name: "    <<  consensusEvent.transaction().asset().name();
+    logger::info("connection") << "Operation";
+    logger::info("connection")
+        << "size: " << consensusEvent.eventsignatures_size();
+    logger::info("connection")
+        << "name: " << consensusEvent.transaction().asset().name();
     ClientContext context;
 
     Status status = stub_->Verify(&context, consensusEvent, &response);
 
     if (status.ok()) {
         logger::info("connection")  << "response: " << response.value();
-        //return {response.value(), valid(response.confirm()) ? RESPONSE_OK :
-    RESPONSE_INVALID_SIG}; } else { logger::error("connection") <<
-    status.error_code() << ": " << status.error_message();
+        //return {response.value(), valid(response.confirm()) ? RESPONSE_OK : RESPONSE_INVALID_SIG}; } else { logger::error("connection") << status.error_code() << ": " << status.error_message();
         //std::cout << status.error_code() << ": " << status.error_message();
         //return {"RPC failed", RESPONSE_ERRCONN};
     }
@@ -179,30 +188,48 @@ public:
  * Connection Service
  ************************************************************************************/
 class SumeragiConnectionServiceImpl final : public ::iroha::Sumeragi::Service {
- public:
+public:
   Status Verify(ServerContext* context,
                 const flatbuffers::BufferRef<ConsensusEvent>* request,
                 flatbuffers::BufferRef<Response>* response) override {
-    const ::iroha::ConsensusEvent* event = request->GetRoot();
-    return Status::OK;
+
+
+    return grpc::Status::OK;
   }
 
   Status Torii(ServerContext* context,
                const flatbuffers::BufferRef<Transaction>* transaction,
                flatbuffers::BufferRef<Response>* response) override {
-    flatbuffers::FlatBufferBuilder fbb;
-    auto res_offset = ::iroha::CreateResponseDirect(fbb,"OK!!",::iroha::Code_COMMIT,0);
-    fbb.Finish(res_offset);
-    // Since we keep reusing the same FlatBufferBuilder, the memory it owns
-    // remains valid until the next call (this BufferRef doesn't own the
-    // memory it points to).
+    // Extract Transaction from BufferRef<Transaction>
+    auto txRawPtr = transaction->GetRoot();
+    auto txPtr = std::make_unique<Transaction>(std::move(*txPtr));
+    txRawPtr = nullptr;
+
+    // Push new processTransaction() task to pool
+    receiver.call("", std::move(txPtr));  // currently, from = "" (dummy)
+
+    // Create signature
+    auto signatures = transaction->signatures(); // TODO: What should be?
+
+    // Create response
+    fbb.Clear();
+
+    auto resOffset = ::iroha::CreateResponseDirect(
+        fbb,
+        /*message*/     "OK",
+        /*iroha::Code*/ iroha::Code_COMMIT,
+        /*signature*/   signature->Get(0));
+
+    fbb.Finish(resOffset);
+
     *response = flatbuffers::BufferRef<::iroha::Response>(
-       fbb.GetBufferPointer(),
-       fbb.GetSize());
-    receiver(event);
-    logger::info("AA") << "Yurushite";
+        fbb.GetBufferPointer(), fbb.GetSize());
+
     return grpc::Status::OK;
   }
+
+private:
+  flatbuffers::FlatbufferBuilder fbb;
 };
 
 /************************************************************************************
