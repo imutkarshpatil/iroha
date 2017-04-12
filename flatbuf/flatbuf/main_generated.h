@@ -241,34 +241,6 @@ inline flatbuffers::Offset<ReceiverConfirmation> CreateReceiverConfirmationDirec
       hash ? _fbb.CreateVector<uint8_t>(*hash) : 0);
 }
 
-inline const iroha::ConsensusEvent *GetConsensusEvent(const void *buf) {
-  return flatbuffers::GetRoot<iroha::ConsensusEvent>(buf);
-}
-
-inline const char *ConsensusEventIdentifier() {
-  return "IROH";
-}
-
-inline bool ConsensusEventBufferHasIdentifier(const void *buf) {
-  return flatbuffers::BufferHasIdentifier(
-      buf, ConsensusEventIdentifier());
-}
-
-inline bool VerifyConsensusEventBuffer(
-    flatbuffers::Verifier &verifier) {
-  return verifier.VerifyBuffer<iroha::ConsensusEvent>(ConsensusEventIdentifier());
-}
-
-inline const char *ConsensusEventExtension() {
-  return "iroha";
-}
-
-inline void FinishConsensusEventBuffer(
-    flatbuffers::FlatBufferBuilder &fbb,
-    flatbuffers::Offset<iroha::ConsensusEvent> root) {
-  fbb.Finish(root, ConsensusEventIdentifier());
-}
-
 }  // namespace iroha
 
 #endif  // FLATBUFFERS_GENERATED_MAIN_IROHA_H_

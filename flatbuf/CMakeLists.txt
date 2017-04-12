@@ -1,11 +1,11 @@
-set(FLATBUF_SRC_DIR "${PROJECT_SOURCE_DIR}/core/infra/flatbuf")
+set(FLATBUF_SCHEMA_DIR "${PROJECT_SOURCE_DIR}/flatbuf/schema")
+set(FLATBUF_GENERATED_DIR "${PROJECT_SOURCE_DIR}/flatbuf/flatbuf")
 
-file(MAKE_DIRECTORY ${FLATBUF_SRC_DIR})
-execute_process(COMMAND bash "-c" "cd $IROHA_HOME/flatbuf; flatc --cpp --grpc -o ${FLATBUF_SRC_DIR} *.fbs")
-execute_process(COMMAND bash "-c" "cd $IROHA_HOME/flatbuf; flatc --cpp -o ${FLATBUF_SRC_DIR} *.fbs")
+file(MAKE_DIRECTORY ${FLATBUF_GENERATED_DIR})
+execute_process(COMMAND bash "-c" "cd ${FLATBUF_SCHEMA_DIR}; flatc --cpp --grpc -o ${FLATBUF_GENERATED_DIR} ${FLATBUF_SCHEMA_DIR}/*.fbs")
 
 add_library(endpoint_fbs STATIC
-    ${FLATBUF_SRC_DIR}/endpoint.grpc.fb.cc
+    ${FLATBUF_GENERATED_DIR}/endpoint.grpc.fb.cc
 )
 
 target_link_libraries(endpoint_fbs

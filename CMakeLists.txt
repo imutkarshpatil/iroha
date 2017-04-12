@@ -19,6 +19,7 @@ message(STATUS "-DTESTING=${TESTING}")
 message(STATUS "-DBENCHMARKING=${BENCHMARKING}")
 
 include_directories(${PROJECT_SOURCE_DIR}/core)
+include_directories(${PROJECT_SOURCE_DIR}/flatbuf)
 include("dependencies.cmake")
 
 add_subdirectory(flatbuf)
